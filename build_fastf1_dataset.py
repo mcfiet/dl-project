@@ -203,6 +203,11 @@ def main() -> None:
         f"{len(df)} rows. Feature columns: {feature_cols}. Target: {target_col}"
     )
 
+    # Fill obvious gaps to avoid NaNs during training
+    df["avg_race_lap_time_s"] = df["avg_race_lap_time_s"].fillna(df["avg_race_lap_time_s"].mean())
+    df["quali_position"] = df["quali_position"].fillna(-1)
+    df["prev_points_total"] = df["prev_points_total"].fillna(0.0)
+
     args.output.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(args.output, index=False)
     print(f"Wrote {args.output.resolve()}")
