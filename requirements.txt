@@ -3,4 +3,4 @@ fastf1
 seaborn
 tqdm
 scikit-learn
-scikit-learn
+torch
