@@ -144,7 +144,9 @@ def collect_rows(
                     if qrow.empty:
                         qrow = quali_results[quali_results["Abbreviation"] == abb]
                     if not qrow.empty:
-                        quali_pos = int(qrow["Position"].iloc[0])
+                        pos_value = qrow["Position"].iloc[0]
+                        # Some events have missing/NaN positions; keep as None instead of raising.
+                        quali_pos = None if pd.isna(pos_value) else int(pos_value)
 
                 finish_pos = None
                 points_awarded = 0.0
