@@ -6,13 +6,16 @@ Features include:
  - average race lap time per driver
  - qualifying position
  - cumulative points scored before the event
+ - rolling form features (recent points) and per-race rates
+ - team cumulative/per-race points
+ - lap-time delta vs event mean pace
 Label:
  - whether the driver scored points in the race
 """
 from __future__ import annotations
 
 import argparse
-from collections import defaultdict
+from collections import defaultdict, deque
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
@@ -81,6 +84,10 @@ def collect_rows(
     limit_rounds: Optional[int],
 ) -> List[Dict]:
     driver_points: Dict[str, float] = defaultdict(float)
+    driver_recent_points: Dict[str, deque] = defaultdict(lambda: deque(maxlen=3))
+    driver_race_counts: Dict[str, int] = defaultdict(int)
+    team_points: Dict[str, float] = defaultdict(float)
+    team_race_counts: Dict[str, int] = defaultdict(int)
     rows: List[Dict] = []
 
     for year in years:
@@ -125,6 +132,11 @@ def collect_rows(
 
             race_results = race.results
             quali_results = quali.results
+            event_mean_lap = (
+                race_laps["LapTime"].dt.total_seconds().mean()
+                if not race_laps.empty
+                else float("nan")
+            )
 
             for driver_number in race.drivers:
                 info = race.get_driver(driver_number)
@@ -160,6 +172,19 @@ def collect_rows(
                         points_awarded = float(rrow["Points"].iloc[0])
 
                 prev_points = driver_points[abb]
+                rolling_points_last3 = sum(driver_recent_points[abb])
+                races_so_far = driver_race_counts[abb]
+                driver_points_per_race = prev_points / races_so_far if races_so_far > 0 else 0.0
+
+                team_prev_points = team_points[team]
+                team_races_so_far = team_race_counts[team]
+                team_points_per_race = (
+                    team_prev_points / team_races_so_far if team_races_so_far > 0 else 0.0
+                )
+
+                lap_delta_vs_event = (
+                    avg_lap - event_mean_lap if pd.notna(avg_lap) and pd.notna(event_mean_lap) else float("nan")
+                )
 
                 rows.append(
                     {
@@ -170,14 +195,23 @@ def collect_rows(
                         "team": team,
                         "quali_position": quali_pos,
                         "avg_race_lap_time_s": avg_lap,
+                        "lap_delta_vs_event_mean_s": lap_delta_vs_event,
                         "finish_position": finish_pos,
                         "points_awarded": points_awarded,
                         "prev_points_total": prev_points,
+                        "rolling_points_last3": rolling_points_last3,
+                        "driver_points_per_race": driver_points_per_race,
+                        "team_prev_points_total": team_prev_points,
+                        "team_points_per_race": team_points_per_race,
                         "scored_points": 1 if points_awarded > 0 else 0,
                     }
                 )
 
                 driver_points[abb] = prev_points + points_awarded
+                driver_recent_points[abb].append(points_awarded)
+                driver_race_counts[abb] += 1
+                team_points[team] = team_prev_points + points_awarded
+                team_race_counts[team] += 1
 
     return rows
 
@@ -198,7 +232,16 @@ def main() -> None:
 
     df = pd.DataFrame(rows)
 
-    feature_cols = ["avg_race_lap_time_s", "quali_position", "prev_points_total"]
+    feature_cols = [
+        "avg_race_lap_time_s",
+        "lap_delta_vs_event_mean_s",
+        "quali_position",
+        "prev_points_total",
+        "rolling_points_last3",
+        "driver_points_per_race",
+        "team_prev_points_total",
+        "team_points_per_race",
+    ]
     target_col = "scored_points"
     print(
         "Built dataset with "
@@ -209,6 +252,13 @@ def main() -> None:
     df["avg_race_lap_time_s"] = df["avg_race_lap_time_s"].fillna(df["avg_race_lap_time_s"].mean())
     df["quali_position"] = df["quali_position"].fillna(-1)
     df["prev_points_total"] = df["prev_points_total"].fillna(0.0)
+    df["rolling_points_last3"] = df["rolling_points_last3"].fillna(0.0)
+    df["driver_points_per_race"] = df["driver_points_per_race"].fillna(0.0)
+    df["team_prev_points_total"] = df["team_prev_points_total"].fillna(0.0)
+    df["team_points_per_race"] = df["team_points_per_race"].fillna(0.0)
+    df["lap_delta_vs_event_mean_s"] = df["lap_delta_vs_event_mean_s"].fillna(
+        df["lap_delta_vs_event_mean_s"].mean()
+    )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(args.output, index=False)
