@@ -18,6 +18,7 @@ import re
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set
+import logging
 
 import fastf1
 from fastf1.core import DataNotLoadedError
@@ -63,6 +64,13 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def quiet_logs() -> None:
+    """Silence verbose FastF1/requests logging."""
+    for name in ["fastf1", "fastf1.logger", "fastf1._api", "fastf1.req", "urllib3"]:
+        logging.getLogger(name).setLevel(logging.ERROR)
+    logging.basicConfig(level=logging.ERROR)
+
+
 def enable_cache(cache_dir: Path) -> None:
     cache_dir.mkdir(parents=True, exist_ok=True)
     fastf1.Cache.enable_cache(cache_dir, ignore_version=True)
@@ -79,8 +87,7 @@ def safe_load_session(
         session = fastf1.get_session(year, round_number, code)
         session.load(telemetry=False, weather=load_weather)
         return session
-    except Exception as exc:  # noqa: BLE001
-        print(f"[warn] Failed to load {year} round {round_number} session {code}: {exc}")
+    except Exception:  # noqa: BLE001
         return None
 
 
@@ -175,11 +182,12 @@ def collect_rows(
         try:
             schedule = fastf1.get_event_schedule(year)
         except Exception as exc:  # noqa: BLE001
-            print(f"[warn] Failed to load schedule for {year}: {exc}; skipping year.")
             continue
         race_schedule = schedule[schedule["RoundNumber"] > 0]
         if limit_rounds:
             race_schedule = race_schedule.head(limit_rounds)
+        total_events = len(race_schedule)
+        loaded_events = 0
 
         iterator = tqdm(
             race_schedule.iterrows(),
@@ -196,10 +204,6 @@ def collect_rows(
                 continue
 
             if race.drivers is None or len(race.drivers) == 0:
-                print(
-                    f"[warn] No drivers found for {year} round {round_number} "
-                    f"{event['EventName']}; skipping event."
-                )
                 continue
 
             race_results = race.results
@@ -299,6 +303,11 @@ def collect_rows(
                 if team:
                     team_points[team] = team_prev_points + points_awarded
 
+            loaded_events += 1
+            iterator.set_postfix({"loaded": f"{loaded_events}/{total_events}"})
+
+        print(f"{year}: loaded {loaded_events}/{total_events} events")
+
     return rows
 
 
@@ -335,6 +344,7 @@ def build_dataset(
 
 def main() -> None:
     args = parse_args()
+    quiet_logs()
     enable_cache(args.cache_dir)
 
     df = build_dataset(args.years, args.session_type, args.limit_rounds)
