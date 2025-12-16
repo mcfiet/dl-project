@@ -278,6 +278,7 @@ def collect_rows(
 
                 rows.append(
                     {
+                        "year": year,
                         "driver_id": driver_id,
                         "constructor_id": constructor_id,
                         "circuit_id": circuit_id,
@@ -317,6 +318,7 @@ def build_dataset(
                 "driver_id",
                 "constructor_id",
                 "circuit_id",
+                "year",
                 "grid_position",
                 "quali_delta",
                 "quali_tm_delta",
@@ -344,6 +346,7 @@ def main() -> None:
         "driver_id",
         "constructor_id",
         "circuit_id",
+        "year",
         "grid_position",
         "quali_delta",
         "quali_tm_delta",
@@ -359,6 +362,7 @@ def main() -> None:
         f"{len(df)} rows. Feature columns: {feature_cols}. Target: {target_col}."
     )
 
+    df["year"] = df["year"].fillna(0).astype(int)
     df["driver_id"] = df["driver_id"].fillna("unknown")
     df["constructor_id"] = df["constructor_id"].fillna("unknown")
     df["circuit_id"] = df["circuit_id"].fillna("unknown")
