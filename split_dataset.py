@@ -3,7 +3,7 @@
 Split a CSV into train/val/test **by year**, keeping temporal order.
 Usage:
   python split_dataset.py --data data/grandprix_features.csv --target points_scored \
-      --year-column year --test-size 0.2 --val-size 0.25
+      --year-column year --test-size 0.2 --val-size 0.25 --force-train-years 2022
 This yields oldest years for train, next block for val, newest for test
 (val-size is a fraction of the remaining non-test years).
 Outputs three CSVs alongside the input (train/val/test suffixes).
@@ -36,6 +36,13 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--random-state", type=int, default=42, help="Random seed")
     p.add_argument("--output-prefix", type=str, default=None, help="Optional prefix for output files")
+    p.add_argument(
+        "--force-train-years",
+        type=int,
+        nargs="+",
+        default=[2022],
+        help="Year(s) that must always be placed in the train split if present (default: 2022).",
+    )
     return p.parse_args()
 
 
@@ -73,6 +80,16 @@ def main() -> None:
 
     if not train_years:
         raise ValueError("No years allocated to train split; adjust val/test sizes.")
+
+    force_train_years = sorted(set(args.force_train_years or []))
+    missing_force = [y for y in force_train_years if y not in years]
+    if missing_force:
+        print(f"[warn] Forced train years not in dataset: {missing_force}")
+
+    # Move forced years into train and remove from val/test if needed
+    train_years = sorted(set(train_years) | (set(force_train_years) & set(years)))
+    val_years = [y for y in val_years if y not in train_years]
+    test_years = [y for y in test_years if y not in train_years]
 
     train_df = df[df[args.year_column].isin(train_years)].copy()
     val_df = df[df[args.year_column].isin(val_years)].copy() if val_years else pd.DataFrame()
