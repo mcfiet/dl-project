@@ -45,7 +45,7 @@ profile_default/
 *.npy
 
 # Data directories
-data/
+data/fastf1_cache
 datasets/
 models/
 
