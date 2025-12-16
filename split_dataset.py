@@ -1,25 +1,32 @@
 #!/usr/bin/env python3
 """
-Split a CSV into train/val/test with stratification on the target.
+Split a CSV into train/val/test **by year**, keeping temporal order.
 Usage:
-  python split_dataset.py --data data/grandprix_features_2.csv --target scored_points \
-      --test-size 0.2 --val-size 0.25 --random-state 42
-This yields 60/20/20 by default (val-size is a fraction of the remaining train).
+  python split_dataset.py --data data/grandprix_features.csv --target points_scored \
+      --year-column year --test-size 0.2 --val-size 0.25
+This yields oldest years for train, next block for val, newest for test
+(val-size is a fraction of the remaining non-test years).
 Outputs three CSVs alongside the input (train/val/test suffixes).
 """
 from __future__ import annotations
 
 import argparse
+import math
 from pathlib import Path
 
 import pandas as pd
-from sklearn.model_selection import train_test_split
 
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Split a CSV into train/val/test sets.")
     p.add_argument("--data", type=Path, required=True, help="Path to input CSV")
     p.add_argument("--target", type=str, required=True, help="Target column for stratification")
+    p.add_argument(
+        "--year-column",
+        type=str,
+        default="year",
+        help="Column containing season/year used for temporal splits (default: year)",
+    )
     p.add_argument("--test-size", type=float, default=0.2, help="Test fraction (default 0.2)")
     p.add_argument(
         "--val-size",
@@ -37,16 +44,43 @@ def main() -> None:
     df = pd.read_csv(args.data)
     if args.target not in df.columns:
         raise ValueError(f"Target column '{args.target}' not found in {args.data}")
+    if args.year_column not in df.columns:
+        raise ValueError(f"Year column '{args.year_column}' not found in {args.data}")
 
-    train_df, test_df = train_test_split(
-        df, test_size=args.test_size, stratify=df[args.target], random_state=args.random_state
+    # ensure year is numeric and drop rows without year
+    if not pd.api.types.is_numeric_dtype(df[args.year_column]):
+        try:
+            df[args.year_column] = df[args.year_column].astype(int)
+        except Exception as exc:  # noqa: BLE001
+            raise ValueError(f"Year column '{args.year_column}' is not numeric: {exc}") from exc
+    df = df.dropna(subset=[args.year_column])
+    years = sorted(df[args.year_column].unique())
+    if len(years) < 3:
+        raise ValueError(f"Need at least 3 distinct years to split; found {years}")
+
+    n_years = len(years)
+    n_test_years = max(1, math.ceil(n_years * args.test_size)) if args.test_size > 0 else 0
+    test_years = years[-n_test_years:] if n_test_years else []
+    train_val_years = years[:-n_test_years] if n_test_years else years
+    if not train_val_years:
+        raise ValueError("No years left for train/val after allocating test split.")
+
+    n_val_years = (
+        max(1, math.ceil(len(train_val_years) * args.val_size)) if args.val_size > 0 else 0
     )
-    train_df, val_df = train_test_split(
-        train_df,
-        test_size=args.val_size,
-        stratify=train_df[args.target],
-        random_state=args.random_state,
-    )
+    val_years = train_val_years[-n_val_years:] if n_val_years else []
+    train_years = train_val_years[:-n_val_years] if n_val_years else train_val_years
+
+    if not train_years:
+        raise ValueError("No years allocated to train split; adjust val/test sizes.")
+
+    train_df = df[df[args.year_column].isin(train_years)].copy()
+    val_df = df[df[args.year_column].isin(val_years)].copy() if val_years else pd.DataFrame()
+    test_df = df[df[args.year_column].isin(test_years)].copy() if test_years else pd.DataFrame()
+
+    print(f"Years -> train: {train_years} | val: {val_years} | test: {test_years}")
+    if val_df.empty or test_df.empty:
+        print("[warn] Val or test split is empty; check chosen sizes/years.")
 
     prefix = args.output_prefix or args.data.with_suffix("")
     prefix = Path(prefix)
