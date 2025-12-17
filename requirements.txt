@@ -4,3 +4,4 @@ seaborn
 tqdm
 scikit-learn
 torch
+tbpfn
