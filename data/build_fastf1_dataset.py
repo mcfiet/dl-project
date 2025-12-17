@@ -283,6 +283,7 @@ def collect_rows(
                 rows.append(
                     {
                         "year": year,
+                        "round_number": round_number,
                         "driver_id": driver_id,
                         "constructor_id": constructor_id,
                         "circuit_id": circuit_id,
@@ -328,6 +329,7 @@ def build_dataset(
                 "constructor_id",
                 "circuit_id",
                 "year",
+                "round_number",
                 "grid_position",
                 "quali_delta",
                 "quali_tm_delta",
@@ -357,6 +359,7 @@ def main() -> None:
         "constructor_id",
         "circuit_id",
         "year",
+        "round_number",
         "grid_position",
         "quali_delta",
         "quali_tm_delta",
@@ -373,6 +376,7 @@ def main() -> None:
     )
 
     df["year"] = df["year"].fillna(0).astype(int)
+    df["round_number"] = df["round_number"].fillna(0).astype(int)
     df["driver_id"] = df["driver_id"].fillna("unknown")
     df["constructor_id"] = df["constructor_id"].fillna("unknown")
     df["circuit_id"] = df["circuit_id"].fillna("unknown")
