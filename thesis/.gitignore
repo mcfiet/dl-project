@@ -1,0 +1,44 @@
+# Logs und Hilfsdateien
+*.log
+*.aux
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+*.nav
+*.snm
+
+# Editor-spezifische Dateien
+*~           # temporäre Dateien
+*.swp        # vim swap files
+*.bak        # Backup-Dateien
+*.tmp        # Temporäre Dateien
+
+# Kompilierte Dateien
+*.pdf        # Ausgabedokumente
+*.dvi        # DVI-Ausgaben
+*.ps         # Postscript-Dateien
+
+# Bibliografie-Zwischenprodukte
+*.bcf
+*.run.xml
+
+# IDE-spezifische Dateien
+.vscode/     # VS Code Projektkonfiguration
+.idea/       # IntelliJ/CLion/PhpStorm/WebStorm Projekte
+*.iml
+
+# Bilder
+*.jpg
+*.png
+*.pdf_tex    # Importierte LaTeX-Bilder-Dateien
+img/
+
+# Sonstige temporäre Verzeichnisse
+_build/
+build/

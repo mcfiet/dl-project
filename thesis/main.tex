@@ -1,0 +1,50 @@
+\documentclass[a4paper, ngerman, 12pt]{scrartcl}
+
+\input{options/packages.tex}
+
+\DeclareDelimFormat{nameyeardelim}{\addcomma\space}
+\providecommand{\apashortdash}{-}
+
+\input{options/code.tex}
+
+\addbibresource{bibliography.bib}
+
+
+\begin{document}
+
+\title{Vorhersagen verschiedener Formel 1 Events} % Title
+\author{Fiete Scheel} % Author
+\date{\today} % Date
+
+\maketitle
+
+\newpage
+\tableofcontents
+
+\newpage
+\section{Einleitung}
+\input{chapters/01_introduction.tex}
+
+\section{Stand der Forschung}
+\input{chapters/02_state-of-research.tex}
+
+\section{Methodik}
+\input{chapters/03_method.tex}
+
+\section{Experimente}
+\input{chapters/04_experiments.tex}
+
+\section{Ergebnisse und Diskussion}
+\input{chapters/05_results-and-discussion.tex}
+
+\section{Fazit und Ausblick}
+\input{chapters/06_fazit.tex}
+
+
+\newpage
+\printbibliography
+
+\newpage
+\input{chapters/99_appendix.tex}
+
+\end{document}
