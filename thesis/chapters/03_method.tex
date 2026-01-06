@@ -1,5 +1,43 @@
 \subsection{Datengrundlage}
+Als Datenquelle dient das Python-Paket FastF1, das offizielle F1-Ergebnis- und
+Qualifyingdaten bereitstellt. Für jede Saison und jedes Rennen werden die
+Qualifying- und Rennsessions geladen und pro Fahrer ein Datensatz erzeugt.
+Jede Zeile entspricht damit einem Fahrer in einem Grand Prix. Verwendet werden
+ausschließlich vor dem Rennen verfügbare Informationen, um Datenleckage zu
+vermeiden. Die Merkmale umfassen sowohl kategorische Identifikatoren als auch
+numerische Leistungsindikatoren:
+\begin{itemize}
+  \item \textbf{Kategorisch:} Fahrer (\texttt{driver\_id}), Team
+    (\texttt{constructor\_id}) und Strecke (\texttt{circuit\_id}).
+  \item \textbf{Numerisch:} Startposition aus dem Qualifying
+    (\texttt{grid\_position}), Qualifying-Deltas zum Sessionsbesten und zum
+    Teamkollegen (\texttt{quali\_delta}, \texttt{quali\_tm\_delta}), kumulierte
+    Saisonpunkte von Fahrer und Team vor dem Rennen
+    (\texttt{season\_pts\_driver}, \texttt{season\_pts\_team}), gleitender
+    Durchschnitt der letzten drei Rennen (\texttt{last\_3\_avg}) sowie einfache
+    Kontextvariablen für Stadtkurse und Regenrennen
+    (\texttt{is\_street\_circuit}, \texttt{is\_wet}).
+\end{itemize}
+Das Ziellabel ist \texttt{points\_scored} und markiert, ob ein Fahrer im Rennen
+Punkte erzielt hat (binäre Klassifikation).
 
 \subsection{Modellarchitekturen}
+Die Daten sind tabellarisch mit einer Mischung aus kategorischen und
+numerischen Merkmalen. Daher werden mehrere Modellfamilien verglichen:
+eine logistische Regression als lineare Baseline, ein Random-Forest-Modell
+als nichtlineares Ensemble sowie Gradient-Boosting-Modelle (XGBoost bzw.
+LightGBM), die sich in ähnlichen Aufgaben als robust erwiesen haben. Die
+Boosting-Modelle dienen als Hauptvergleich, da sie nichtlineare Effekte und
+Interaktionen zwischen Merkmalen effizient abbilden können.
 
 \subsection{Trainingssetup}
+Die Datensätze werden nach Saison getrennt, um zeitliche Leckage zu vermeiden.
+Im vorliegenden Setup werden die Saisons 2015--2023 als Training,
+2024 als Validierung und 2025 als Test verwendet (insgesamt 3740/479/479
+Beispiele). Kategorische Variablen werden per One-Hot-Encoding kodiert,
+numerische Merkmale werden imputiert (Median) und skaliert. Für unausgewogene
+Klassen wird in den Baumverfahren eine balancierte Gewichtung verwendet.
+Die Modellselektion erfolgt über die Validierungsdaten, wobei ein
+Entscheidungsschwellenwert auf dem Validierungs-\textit{F1}-Score abgestimmt
+und anschließend auf dem Testdatensatz evaluiert wird. Als Metriken werden
+u.a. \textit{F1}-Score und \textit{Balanced Accuracy} berichtet.

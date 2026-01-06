@@ -4,4 +4,6 @@ seaborn
 tqdm
 scikit-learn
 torch
-tbpfn
+tabpfn
+numpy
+pandas
