@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Build a classification-ready dataset from FastF1 data.
+Build a regression-ready dataset from FastF1 data.
 
 Features include:
  - driver, constructor, and circuit identifiers
@@ -8,8 +8,8 @@ Features include:
  - cumulative season points for driver and constructor
  - rolling form (last 3 race points average)
  - simple context flags (street circuit, wet race)
-Label:
- - whether the driver scored points in the race
+Target:
+ - Racezeit pro Fahrer (Sekunden) aus dem FastF1-Ergebnis (NaN bei DNF/fehlend)
 """
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ from tqdm import tqdm
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Download FastF1 data and build features for a classification model."
+        description="Download FastF1 data and build features for a race-time regression model."
     )
     parser.add_argument(
         "--years",
@@ -241,12 +241,17 @@ def collect_rows(
                         quali_pos = None if pd.isna(pos_value) else int(pos_value)
 
                 points_awarded = 0.0
+                race_time_seconds: Optional[float] = None
                 if race_results is not None and not race_results.empty:
                     rrow = race_results[race_results["DriverNumber"] == driver_number]
                     if rrow.empty:
                         rrow = race_results[race_results["Abbreviation"] == abb]
                     if not rrow.empty:
                         points_awarded = float(rrow["Points"].iloc[0])
+                        if "Time" in rrow.columns:
+                            time_value = rrow["Time"].iloc[0]
+                            if pd.notna(time_value):
+                                race_time_seconds = pd.to_timedelta(time_value).total_seconds()
 
                 prev_points = driver_points[abb]
                 team_prev_points = team_points[team] if team else 0.0
@@ -293,7 +298,7 @@ def collect_rows(
                         "last_3_avg": rolling_avg_last3,
                         "is_street_circuit": street_flag,
                         "is_wet": wet_flag,
-                        "points_scored": 1 if points_awarded > 0 else 0,
+                        "race_time": race_time_seconds,
                     }
                 )
 
@@ -336,7 +341,7 @@ def build_dataset(
                 "last_3_avg",
                 "is_street_circuit",
                 "is_wet",
-                "points_scored",
+                "race_time",
             ]
         )
     return pd.DataFrame(rows)
@@ -367,7 +372,7 @@ def main() -> None:
         "is_street_circuit",
         "is_wet",
     ]
-    target_col = "points_scored"
+    target_col = "race_time"
     print(
         "Built dataset with "
         f"{len(df)} rows. Feature columns: {feature_cols}. Target: {target_col}."
@@ -387,7 +392,8 @@ def main() -> None:
     df["last_3_avg"] = df["last_3_avg"].fillna(0.0)
     df["is_street_circuit"] = df["is_street_circuit"].fillna(0).astype(int)
     df["is_wet"] = df["is_wet"].fillna(0).astype(int)
-    df["points_scored"] = df["points_scored"].fillna(0).astype(int)
+    if "race_time" in df.columns:
+        df["race_time"] = pd.to_numeric(df["race_time"], errors="coerce")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(args.output, index=False)
