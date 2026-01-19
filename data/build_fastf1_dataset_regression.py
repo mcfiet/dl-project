@@ -14,6 +14,9 @@ Target:
      * Alle anderen: Siegerzeit + gemeldeter Gap (falls vorhanden)
      * DNFs/fehlende Zeit -> NaN, Status wird mit ausgegeben
  - leichte Ausreißer-Glättung über Quantil-Clipping
+Weitere abgeleitete Targets:
+ - gap_to_winner (Sekunden, Sieger=0)
+ - race_time_per_lap (Sekunden pro Runde, falls Laps bekannt)
 """
 from __future__ import annotations
 
@@ -276,6 +279,7 @@ def collect_rows(
                 race_time_seconds: Optional[float] = None
                 status_val = ""
                 pos_val: Optional[int] = None
+                laps_val: Optional[int] = None
                 if race_results is not None and not race_results.empty:
                     rrow = race_results[race_results["DriverNumber"] == driver_number]
                     if rrow.empty:
@@ -286,6 +290,13 @@ def collect_rows(
                         pos_raw = rrow["Position"].iloc[0] if "Position" in rrow.columns else None
                         if pd.notna(pos_raw):
                             pos_val = int(pos_raw)
+                        if "Laps" in rrow.columns:
+                            laps_raw = rrow["Laps"].iloc[0]
+                            if pd.notna(laps_raw):
+                                try:
+                                    laps_val = int(laps_raw)
+                                except Exception:
+                                    laps_val = None
                         if is_classified(status_val):
                             if "Time" in rrow.columns:
                                 time_value = rrow["Time"].iloc[0]
@@ -301,6 +312,16 @@ def collect_rows(
                                     else:
                                         # Fallback, falls keine Siegerzeit verfügbar ist
                                         race_time_seconds = parsed
+
+                gap_to_winner = None
+                if pos_val == 1 and race_time_seconds is not None:
+                    gap_to_winner = 0.0
+                elif winner_time_seconds is not None and race_time_seconds is not None:
+                    gap_to_winner = race_time_seconds - winner_time_seconds
+
+                race_time_per_lap = None
+                if race_time_seconds is not None and laps_val and laps_val > 0:
+                    race_time_per_lap = race_time_seconds / laps_val
 
                 prev_points = driver_points[abb]
                 team_prev_points = team_points[team] if team else 0.0
@@ -349,6 +370,9 @@ def collect_rows(
                         "is_wet": wet_flag,
                         "race_time": race_time_seconds,
                         "race_status": status_val or "",
+                        "gap_to_winner": gap_to_winner,
+                        "laps": laps_val,
+                        "race_time_per_lap": race_time_per_lap,
                     }
                 )
 
@@ -393,6 +417,9 @@ def build_dataset(
                 "is_wet",
                 "race_time",
                 "race_status",
+                "gap_to_winner",
+                "laps",
+                "race_time_per_lap",
             ]
         )
     return pd.DataFrame(rows)
@@ -422,6 +449,7 @@ def main() -> None:
         "last_3_avg",
         "is_street_circuit",
         "is_wet",
+        "laps",
     ]
     target_col = "race_time"
     print(
@@ -444,12 +472,25 @@ def main() -> None:
     df["is_street_circuit"] = df["is_street_circuit"].fillna(0).astype(int)
     df["is_wet"] = df["is_wet"].fillna(0).astype(int)
     df["race_status"] = df["race_status"].fillna("")
+    df["laps"] = df["laps"].fillna(0).astype(int)
     if "race_time" in df.columns:
         df["race_time"] = pd.to_numeric(df["race_time"], errors="coerce")
         finite = df["race_time"].dropna()
         if not finite.empty:
             lower, upper = finite.quantile([0.01, 0.99])
             df["race_time"] = df["race_time"].clip(lower=lower, upper=upper)
+    if "gap_to_winner" in df.columns:
+        df["gap_to_winner"] = pd.to_numeric(df["gap_to_winner"], errors="coerce")
+        finite_gap = df["gap_to_winner"].dropna()
+        if not finite_gap.empty:
+            gl, gu = finite_gap.quantile([0.01, 0.99])
+            df["gap_to_winner"] = df["gap_to_winner"].clip(lower=gl, upper=gu)
+    if "race_time_per_lap" in df.columns:
+        df["race_time_per_lap"] = pd.to_numeric(df["race_time_per_lap"], errors="coerce")
+        finite_lap = df["race_time_per_lap"].dropna()
+        if not finite_lap.empty:
+            ll, lu = finite_lap.quantile([0.01, 0.99])
+            df["race_time_per_lap"] = df["race_time_per_lap"].clip(lower=ll, upper=lu)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(args.output, index=False)
