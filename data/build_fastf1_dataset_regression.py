@@ -9,21 +9,25 @@ Features include:
  - rolling form (last 3 race points average)
  - simple context flags (street circuit, wet race)
 Target:
- - Racezeit pro Fahrer (Sekunden) aus dem FastF1-Ergebnis (NaN bei DNF/fehlend)
+ - konsistente Racezeit pro Fahrer in Sekunden:
+     * Sieger: offizielle Rennzeit
+     * Alle anderen: Siegerzeit + gemeldeter Gap (falls vorhanden)
+     * DNFs/fehlende Zeit -> NaN, Status wird mit ausgegeben
+ - leichte Ausreißer-Glättung über Quantil-Clipping
 """
 from __future__ import annotations
 
 import argparse
 import re
 from collections import defaultdict, deque
+from datetime import timedelta
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set
-import logging
-
 import fastf1
 from fastf1.core import DataNotLoadedError
 import pandas as pd
 from tqdm import tqdm
+import logging
 
 
 def parse_args() -> argparse.Namespace:
@@ -114,6 +118,27 @@ def build_street_circuit_lookup() -> Set[str]:
         "azerbaijan",
     }
     return keywords
+
+
+def parse_time_to_seconds(value) -> Optional[float]:
+    """Convert FastF1 result time/gap to seconds."""
+    if value is None:
+        return None
+    if isinstance(value, timedelta):
+        return value.total_seconds()
+    try:
+        td = pd.to_timedelta(value)
+    except Exception:  # noqa: BLE001
+        return None
+    if pd.isna(td):
+        return None
+    return float(td.total_seconds())
+
+
+def is_classified(status: str) -> bool:
+    """Return True if driver finished/classified; False for DNFs/DSQ."""
+    cleaned = (status or "").strip().lower()
+    return cleaned.startswith("finished") or cleaned.startswith("+") or cleaned.startswith("lap")
 
 
 def infer_wet_race(session: fastf1.core.Session) -> int:
@@ -217,6 +242,13 @@ def collect_rows(
             wet_flag = infer_wet_race(race)
             team_to_drivers: Dict[str, List[str]] = defaultdict(list)
             driver_info_by_number: Dict[str, Dict] = {}
+            winner_time_seconds: Optional[float] = None
+
+            if race_results is not None and not race_results.empty:
+                winner_rows = race_results[race_results["Position"] == 1]
+                if not winner_rows.empty:
+                    w_time = winner_rows["Time"].iloc[0] if "Time" in winner_rows.columns else None
+                    winner_time_seconds = parse_time_to_seconds(w_time)
 
             for driver_number in race.drivers:
                 info = race.get_driver(driver_number)
@@ -242,16 +274,33 @@ def collect_rows(
 
                 points_awarded = 0.0
                 race_time_seconds: Optional[float] = None
+                status_val = ""
+                pos_val: Optional[int] = None
                 if race_results is not None and not race_results.empty:
                     rrow = race_results[race_results["DriverNumber"] == driver_number]
                     if rrow.empty:
                         rrow = race_results[race_results["Abbreviation"] == abb]
                     if not rrow.empty:
                         points_awarded = float(rrow["Points"].iloc[0])
-                        if "Time" in rrow.columns:
-                            time_value = rrow["Time"].iloc[0]
-                            if pd.notna(time_value):
-                                race_time_seconds = pd.to_timedelta(time_value).total_seconds()
+                        status_val = str(rrow["Status"].iloc[0]) if "Status" in rrow.columns else ""
+                        pos_raw = rrow["Position"].iloc[0] if "Position" in rrow.columns else None
+                        if pd.notna(pos_raw):
+                            pos_val = int(pos_raw)
+                        if is_classified(status_val):
+                            if "Time" in rrow.columns:
+                                time_value = rrow["Time"].iloc[0]
+                                parsed = parse_time_to_seconds(time_value)
+                                # Sieger: direkte Zeit
+                                if pos_val == 1:
+                                    race_time_seconds = parsed
+                                    if winner_time_seconds is None:
+                                        winner_time_seconds = parsed
+                                else:
+                                    if winner_time_seconds is not None and parsed is not None:
+                                        race_time_seconds = winner_time_seconds + parsed
+                                    else:
+                                        # Fallback, falls keine Siegerzeit verfügbar ist
+                                        race_time_seconds = parsed
 
                 prev_points = driver_points[abb]
                 team_prev_points = team_points[team] if team else 0.0
@@ -299,6 +348,7 @@ def collect_rows(
                         "is_street_circuit": street_flag,
                         "is_wet": wet_flag,
                         "race_time": race_time_seconds,
+                        "race_status": status_val or "",
                     }
                 )
 
@@ -342,6 +392,7 @@ def build_dataset(
                 "is_street_circuit",
                 "is_wet",
                 "race_time",
+                "race_status",
             ]
         )
     return pd.DataFrame(rows)
@@ -392,8 +443,13 @@ def main() -> None:
     df["last_3_avg"] = df["last_3_avg"].fillna(0.0)
     df["is_street_circuit"] = df["is_street_circuit"].fillna(0).astype(int)
     df["is_wet"] = df["is_wet"].fillna(0).astype(int)
+    df["race_status"] = df["race_status"].fillna("")
     if "race_time" in df.columns:
         df["race_time"] = pd.to_numeric(df["race_time"], errors="coerce")
+        finite = df["race_time"].dropna()
+        if not finite.empty:
+            lower, upper = finite.quantile([0.01, 0.99])
+            df["race_time"] = df["race_time"].clip(lower=lower, upper=upper)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(args.output, index=False)
