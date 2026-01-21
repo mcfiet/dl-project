@@ -6,7 +6,7 @@ Features include:
  - driver, constructor, and circuit identifiers
  - grid position and qualifying deltas (overall + teammate)
  - cumulative season points for driver and constructor
- - rolling form (last 3 race points average)
+- rolling form (last 3 race points average)
  - simple context flags (street circuit, wet race)
 Target:
  - konsistente Racezeit pro Fahrer in Sekunden:
@@ -17,6 +17,8 @@ Target:
 Weitere abgeleitete Targets:
  - gap_to_winner (Sekunden, Sieger=0)
  - race_time_per_lap (Sekunden pro Runde, falls Laps bekannt)
+Zusätzliche Trainingsfeatures:
+ - Trainingssessions FP1/FP2/FP3: beste Rundenzeit (s), Rundenanzahl, Relativzeit zum Session-Best
 """
 from __future__ import annotations
 
@@ -194,6 +196,37 @@ def best_quali_lap_times(quali: fastf1.core.Session) -> Dict[str, float]:
     return times
 
 
+def session_best_laps(session: Optional[fastf1.core.Session]) -> tuple[Dict[str, float], Dict[str, int], Optional[float]]:
+    """
+    Return per-driver best lap (seconds), lap counts, and session-best lap.
+    """
+    times: Dict[str, float] = {}
+    counts: Dict[str, int] = {}
+    session_best: Optional[float] = None
+    if session is None:
+        return times, counts, session_best
+    try:
+        laps = session.laps
+    except DataNotLoadedError:
+        return times, counts, session_best
+    if laps is None or laps.empty:
+        return times, counts, session_best
+    for driver_number in session.drivers or []:
+        info = session.get_driver(driver_number)
+        abb = info.get("Abbreviation", str(driver_number))
+        driver_laps = laps.pick_drivers(abb)
+        if driver_laps.empty:
+            driver_laps = laps.pick_drivers(driver_number)
+        if driver_laps.empty:
+            continue
+        counts[abb] = len(driver_laps)
+        best = driver_laps["LapTime"].dt.total_seconds().min()
+        if pd.notna(best):
+            times[abb] = float(best)
+            session_best = best if session_best is None else min(session_best, best)
+    return times, counts, session_best
+
+
 def collect_rows(
     years: Iterable[int],
     session_type: str,
@@ -227,6 +260,9 @@ def collect_rows(
             round_number = int(event["RoundNumber"])
             quali = safe_load_session(year, round_number, "Q", load_weather=False)
             race = safe_load_session(year, round_number, session_type, load_weather=True)
+            fp1 = safe_load_session(year, round_number, "FP1", load_weather=False)
+            fp2 = safe_load_session(year, round_number, "FP2", load_weather=False)
+            fp3 = safe_load_session(year, round_number, "FP3", load_weather=False)
             if quali is None or race is None:
                 continue
 
@@ -246,6 +282,10 @@ def collect_rows(
             team_to_drivers: Dict[str, List[str]] = defaultdict(list)
             driver_info_by_number: Dict[str, Dict] = {}
             winner_time_seconds: Optional[float] = None
+
+            fp1_times, fp1_counts, fp1_best_session = session_best_laps(fp1)
+            fp2_times, fp2_counts, fp2_best_session = session_best_laps(fp2)
+            fp3_times, fp3_counts, fp3_best_session = session_best_laps(fp3)
 
             if race_results is not None and not race_results.empty:
                 winner_rows = race_results[race_results["Position"] == 1]
@@ -353,6 +393,16 @@ def collect_rows(
                 )
                 constructor_id = normalize_identifier(team) if team else "unknown"
 
+                fp1_best = fp1_times.get(abb)
+                fp2_best = fp2_times.get(abb)
+                fp3_best = fp3_times.get(abb)
+                fp1_rel = fp1_best - fp1_best_session if fp1_best is not None and fp1_best_session else None
+                fp2_rel = fp2_best - fp2_best_session if fp2_best is not None and fp2_best_session else None
+                fp3_rel = fp3_best - fp3_best_session if fp3_best is not None and fp3_best_session else None
+                fp1_laps = fp1_counts.get(abb)
+                fp2_laps = fp2_counts.get(abb)
+                fp3_laps = fp3_counts.get(abb)
+
                 rows.append(
                     {
                         "year": year,
@@ -373,6 +423,15 @@ def collect_rows(
                         "gap_to_winner": gap_to_winner,
                         "laps": laps_val,
                         "race_time_per_lap": race_time_per_lap,
+                        "fp1_best": fp1_best,
+                        "fp2_best": fp2_best,
+                        "fp3_best": fp3_best,
+                        "fp1_rel": fp1_rel,
+                        "fp2_rel": fp2_rel,
+                        "fp3_rel": fp3_rel,
+                        "fp1_laps": fp1_laps,
+                        "fp2_laps": fp2_laps,
+                        "fp3_laps": fp3_laps,
                     }
                 )
 
@@ -420,6 +479,15 @@ def build_dataset(
                 "gap_to_winner",
                 "laps",
                 "race_time_per_lap",
+                "fp1_best",
+                "fp2_best",
+                "fp3_best",
+                "fp1_rel",
+                "fp2_rel",
+                "fp3_rel",
+                "fp1_laps",
+                "fp2_laps",
+                "fp3_laps",
             ]
         )
     return pd.DataFrame(rows)
@@ -450,6 +518,15 @@ def main() -> None:
         "is_street_circuit",
         "is_wet",
         "laps",
+        "fp1_best",
+        "fp2_best",
+        "fp3_best",
+        "fp1_rel",
+        "fp2_rel",
+        "fp3_rel",
+        "fp1_laps",
+        "fp2_laps",
+        "fp3_laps",
     ]
     target_col = "race_time"
     print(
@@ -473,6 +550,25 @@ def main() -> None:
     df["is_wet"] = df["is_wet"].fillna(0).astype(int)
     df["race_status"] = df["race_status"].fillna("")
     df["laps"] = df["laps"].fillna(0).astype(int)
+    for col in [
+        "fp1_best",
+        "fp2_best",
+        "fp3_best",
+        "fp1_rel",
+        "fp2_rel",
+        "fp3_rel",
+        "fp1_laps",
+        "fp2_laps",
+        "fp3_laps",
+    ]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+            if col.endswith("_laps"):
+                df[col] = df[col].fillna(0).astype(int)
+            else:
+                non_null = df[col].dropna()
+                fill_value = float(non_null.median()) if not non_null.empty else 0.0
+                df[col] = df[col].fillna(fill_value)
     if "race_time" in df.columns:
         df["race_time"] = pd.to_numeric(df["race_time"], errors="coerce")
         finite = df["race_time"].dropna()
