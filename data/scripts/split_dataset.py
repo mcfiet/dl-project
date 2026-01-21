@@ -54,11 +54,10 @@ def main() -> None:
     if args.year_column not in df.columns:
         raise ValueError(f"Year column '{args.year_column}' not found in {args.data}")
 
-    # ensure year is numeric and drop rows without year
     if not pd.api.types.is_numeric_dtype(df[args.year_column]):
         try:
             df[args.year_column] = df[args.year_column].astype(int)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise ValueError(f"Year column '{args.year_column}' is not numeric: {exc}") from exc
     df = df.dropna(subset=[args.year_column])
     years = sorted(df[args.year_column].unique())
@@ -86,7 +85,6 @@ def main() -> None:
     if missing_force:
         print(f"[warn] Forced train years not in dataset: {missing_force}")
 
-    # Move forced years into train and remove from val/test if needed
     train_years = sorted(set(train_years) | (set(force_train_years) & set(years)))
     val_years = [y for y in val_years if y not in train_years]
     test_years = [y for y in test_years if y not in train_years]

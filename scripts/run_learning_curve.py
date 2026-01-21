@@ -90,7 +90,7 @@ def build_preprocess(cat_cols: List[str], num_cols: List[str]) -> ColumnTransfor
 
 
 def fit_lightgbm(X_train, y_train, X_val, y_val, learning_rate: float, max_estimators: int):
-    import lightgbm as lgb  # type: ignore
+    import lightgbm as lgb
 
     params = {
         "objective": "binary",
@@ -137,7 +137,7 @@ def main() -> None:
     features = args.cat_cols + args.num_cols
 
     preprocess = build_preprocess(args.cat_cols, args.num_cols)
-    # Fit preprocess on train subset each time for fair comparison
+
 
     results = []
     for spec in args.train_sets:
@@ -160,7 +160,6 @@ def main() -> None:
         prob_val = model.predict_proba(X_val_enc)[:, 1]
         prob_test = model.predict_proba(X_test_enc)[:, 1]
 
-        # simple threshold tuning on val F1
         thresholds = np.linspace(0.05, 0.95, 19)
         best_thr, best_f1 = 0.5, -np.inf
         for t in thresholds:

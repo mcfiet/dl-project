@@ -69,7 +69,7 @@ def parse_args() -> argparse.Namespace:
 
 def stratified_sample(df: pd.DataFrame, n: int, target: str, random_state: int) -> pd.DataFrame:
     if n >= len(df):
-        return df.sample(frac=1, random_state=random_state)  # just shuffle
+        return df.sample(frac=1, random_state=random_state)
     grouped = []
     for _, g in df.groupby(target):
         k = max(1, int(round(len(g) * n / len(df))))
@@ -88,8 +88,7 @@ def build_preprocess(cat_cols: List[str], num_cols: List[str]) -> ColumnTransfor
 
 
 def fit_lightgbm(X_train, y_train, X_val, y_val, learning_rate: float, max_estimators: int):
-    import lightgbm as lgb  # type: ignore
-
+    import lightgbm as lgb
     params = {
         "objective": "binary",
         "learning_rate": learning_rate,
@@ -127,8 +126,8 @@ def evaluate(y_true: np.ndarray, prob: np.ndarray, threshold: float) -> dict:
 def main() -> None:
     args = parse_args()
     try:
-        import lightgbm  # noqa: F401
-    except ImportError as exc:  # noqa: BLE001
+        import lightgbm
+    except ImportError as exc:
         raise SystemExit("Please install lightgbm (pip install lightgbm)") from exc
 
     df_train = pd.read_csv(args.train)
@@ -165,7 +164,6 @@ def main() -> None:
         prob_val = model.predict_proba(X_val_enc)[:, 1]
         prob_test = model.predict_proba(X_test_enc)[:, 1]
 
-        # Threshold tuning on val F1
         thresholds = np.linspace(0.05, 0.95, 19)
         best_thr, best_f1 = 0.5, -np.inf
         for t in thresholds:

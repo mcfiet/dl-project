@@ -107,7 +107,6 @@ def assign_years(
     if train_set & val_set or train_set & test_set:
         raise ValueError("train years overlap with val/test; adjust input.")
 
-    # Put all unassigned years into train
     remaining = all_years - val_set - test_set - train_set
     train_set |= remaining
     return train_set, val_set, test_set
@@ -144,11 +143,11 @@ def main() -> None:
     if not val_df.empty:
         val_df.to_csv(out_val, index=False)
     else:
-        out_val.write_text("")  # placeholder empty file
+        out_val.write_text("")
     if not test_df.empty:
         test_df.to_csv(out_test, index=False)
     else:
-        out_test.write_text("")  # placeholder empty file
+        out_test.write_text("")
 
     print(f"Years found: {all_years}")
     print(f"Train years: {sorted(train_years)} -> {len(train_df)} rows -> {out_train}")
