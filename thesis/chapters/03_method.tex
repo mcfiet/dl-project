@@ -60,3 +60,14 @@ der Entscheidungsschwellenwert auf den Validierungs-\textit{F1}-Score optimiert
 und anschließend auf dem Testset ausgewertet. Berichtete Metriken: \textit{F1}
 binär/makro und \textit{Balanced Accuracy}. In der Regression stehen
 \textit{MAE}/\textit{RMSE} im Fokus; da ich zuerst davon ausgegangen wurde, dass sehr kleine Gaps prozentuale Kennzahlen aufblähen, wurde \textit{MAPE} nur ab 5\,s Gap sowie \textit{SMAPE} ergänzend angegeben. Allerdings hatte das keinen großen Einfluss auf \textit{MAPE}.
+
+\subsection{Inferenz und UI}
+Für die Klassifikationsaufgabe wurde ein leichtgewichtiges Inferenz-Setup ergänzt:
+Das beste Modell (TabPFN) wird nach dem Fit inklusive der Kategoriekodierung
+gespeichert und über einen kleinen API-Endpunkt bereitgestellt. Darauf aufbauend
+wurde eine React-Anwendung mit Material UI umgesetzt, in der die Featurewerte
+eingetragen werden können und die anschließend die vorhergesagte Klasse sowie
+die zugehörige Wahrscheinlichkeit ausgibt. Die Oberfläche dient als praktische
+Demonstration, wie das trainierte Modell mit den im Notebook definierten
+Features (Fahrer, Team, Strecke, Jahr und numerische Kontextmerkmale) in eine
+bedienbare Anwendung überführt werden kann.

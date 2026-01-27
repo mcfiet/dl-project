@@ -9,6 +9,7 @@ Das Projekt ist in die folgenden Ordner unterteilt:
 - `data`: Enthält alle Skripte und Dateien zur Erstellung und Verarbeitung der Daten. Die Rohdaten sowie die verarbeiteten Datensätze sind hier zu finden.
 - `notebooks`: Enthält alle Jupyter Notebooks zur Analyse und zum Training der Modelle.
 - `scripts`: Enthält verschiedene Python-Skripte zur Automatisierung von Aufgaben wie Datenauswertung und Modelltraining.
+- `ui`: React-Frontend (Vite + MUI) für die Inferenz der Punkte-Klassifikation.
 - `thesis`: Enthält die LaTeX-Dateien der Projektarbeit.
 
 ## Abhängigkeiten
@@ -25,6 +26,8 @@ Das Projekt hat die folgenden Abhängigkeiten:
 - `numpy`
 - `pandas`
 - `lightgbm`
+- `fastapi`
+- `uvicorn`
 
 Die Abhängigkeiten können mit dem folgenden Befehl installiert werden:
 
@@ -107,6 +110,41 @@ Diese Skripte dienen der Analyse und Auswertung der erstellten Datensätze.
       --output data/learning_curve_sizes.csv \
       --subset-dir data/train_subsets
     ```
+
+### Inferenz (TabPFN) + API
+
+Für die Klassifikationsaufgabe `points_scored` gibt es ein Inferenz-Setup mit
+gespeichertem TabPFN-Bundle und einer kleinen FastAPI:
+
+- `scripts/points_scored_model.py`: Gemeinsame Feature-Logik (CAT/NUM, Encoding).
+- `scripts/train_tabpfn_points_scored.py`: Fit + Speichern des TabPFN-Bundles.
+- `scripts/predict_points_scored.py`: CLI-Inferenz via JSON-Input.
+- `scripts/serve_points_scored.py`: FastAPI-Server mit `/predict`.
+
+**Workflow:**
+```bash
+# 1) Modell fitten und speichern
+python scripts/train_tabpfn_points_scored.py
+
+# 2) API starten
+python -m uvicorn scripts.serve_points_scored:app --reload
+```
+
+**Beispiel-Request (CLI):**
+```bash
+python scripts/predict_points_scored.py --input '{"driver_id":"hamilton","constructor_id":"mercedes","circuit_id":"melbourne","year":2015,"grid_position":1,"quali_delta":0.0,"quali_tm_delta":-0.59,"season_pts_driver":0.0,"season_pts_team":0.0,"last_3_avg":0.0,"is_street_circuit":1,"is_wet":0}'
+```
+
+### UI (React + MUI)
+
+Das Frontend erlaubt das manuelle Eingeben der Features und zeigt Prediction
+plus Wahrscheinlichkeit an. Es nutzt Vite und Material UI.
+
+```bash
+cd ui
+npm install
+npm run dev
+```
 
 ## Notebooks
 
