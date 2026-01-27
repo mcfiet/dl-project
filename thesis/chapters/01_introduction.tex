@@ -4,8 +4,7 @@ Der Code der in diesem Projekt verwendet wurde ist unter \href{https://github.co
 \subsection{Motivation}
 Die Formel 1 ist ein datengetriebener Sport, in dem Performance von vielen Faktoren
 abhängt: Fahrer, Team, Strecke, Startposition und Rennverlauf. Durch die
-Verfügbarkeit strukturierter Telemetrie- und Ergebnisdaten ist es möglich,
-solche Einflüsse quantitativ zu modellieren. Vorhersagen sind für Fans,
+Verfügbarkeit strukturierter Telemetrie- und Ergebnisdaten lässt sich genau bestimmen, wie stark diese Einflüsse sind. Vorhersagen sind für Fans,
 Teams und Medien interessant, weil sie Vergleiche über Saisons hinweg
 ermöglichen und Entscheidungen (z.B. Strategieeinschätzungen) stützen
 können.
@@ -16,7 +15,13 @@ Informationen eine zuverlässige Vorhersage über Rennergebnisse ableiten lässt
 Konkret wird ein Klassifikationsproblem betrachtet: Für jeden Fahrer soll
 vorhergesagt werden, ob er in einem Grand Prix Punkte erzielt. 
 
-Im nächsten Schritt soll ein Regressionsproblem betrachtet werden: So soll dann über die Rennzeit die Position in einem Grand Prix vorhergesagt werden. Damit soll später ein Podium, dann der Sieger usw. vorhergesagt werden. Die Herausforderung liegt in der Heterogenität der Daten (kategorische und numerische Merkmale), der saisonalen Dynamik sowie in der begrenzten Menge an Beispielen pro Saison.
+Darauf aufbauend wird ein Regressionsproblem formuliert, das den Abstand zum
+Sieger (\texttt{gap\_to\_winner}) in Sekunden modelliert. Absolute Rennzeiten
+zeigen sich als zu verrauscht (DNFs, rote Flaggen, Safety Cars); der Gap dient
+als stabileres, saisonübergreifendes Target und erlaubt perspektivisch eine
+Positions- bzw. Podiumsprognose. Die Herausforderung liegt in der Mischung aus
+kategorischen und numerischen Merkmalen, zeitlicher Dynamik sowie in der
+begrenzten Anzahl an Beispielen pro Saison.
 
 \subsection{Ziel dieser Arbeit}
 Ziel ist der Aufbau eines reproduzierbaren Datensatzes aus FastF1-Daten sowie
@@ -24,7 +29,10 @@ die Entwicklung und der Vergleich geeigneter Machine-Learning-Modelle für die
 Punktevorhersage. Dazu werden Merkmale wie Startposition, Qualifying-Performance,
 Saisonschnitt der Punkte und Streckentypen abgeleitet. Die Modelle werden auf
 Trainings-, Validierungs- und Testdaten evaluiert und mit geeigneten Metriken
-(u.a. F1-Score und Balanced Accuracy) verglichen. Abschließend werden die
-Ergebnisse interpretiert und Limitationen sowie mögliche Erweiterungen
-diskutiert.
+(u.a. F1-Score und Balanced Accuracy) verglichen.
 
+Ähnlich wie bei der Klassifikation, wird auch bei der Regression ein Builder entwickelt, der konsistente
+Rennzeiten rekonstruiert, Gaps ableitet und robuste Fehlermaße (MAE/RMSE,
+SMAPE) verwendet. Ziel ist eine belastbare Basis, um anschließend Podiums- oder
+Siegerprognosen abzuleiten. Abschließend werden die Ergebnisse interpretiert
+und Limitationen sowie mögliche Erweiterungen diskutiert.

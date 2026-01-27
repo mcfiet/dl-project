@@ -1,7 +1,26 @@
 \subsection{Fazit und Ausblick}
+\textbf{Stand der Ergebnisse.} Die durchgeführten Experimente zeigen, dass eine zuverlässige Vorhersage von Rennergebnissen möglich ist. Für die Klassifikation (Punktevorhersage) lieferte das vortrainierte TabPFN-Modell mit einem F1-Score von 0,855 die beste Performance, knapp vor dem Random Forest (F1-Score 0,835). Dies unterstreicht die Stärke moderner, auf tabellarische Daten spezialisierter Architekturen. 
+In der Regression erwies sich der Wechsel auf den \texttt{gap\_to\_winner} als entscheidend, um die Varianz des Ziels zu reduzieren. Hier erzielte der Random Forest mit einem MAE von 21,8\,s das beste Ergebnis, dicht gefolgt von TabPFN (22,7\,s) und LightGBM (23,2\,s).
 
 \subsection*{Kritik an der Arbeit}
+\begin{itemize}
+  \item DNFs und außergewöhnliche Rennverläufe werden nicht explizit modelliert, was die Vorhersagegenauigkeit bei chaotischen Rennen einschränkt.
+  \item Die Aussagekraft von prozentualen Metriken (z.B. MAPE) bei sehr kleinen Gaps wird im Ergebnisteil zwar erwähnt, aber nicht systematisch behandelt.
+  \item Eine automatisierte Auswertung der Experimente fehlt, was die Reproduzierbarkeit erschwert und eine Integration in CI/CD-Pipelines verhindert.
+\end{itemize}
 
 \subsection*{Learnings}
+\begin{itemize}
+  \item Jahressplits und das Maskieren von für das Testset unbekannten Kategorien sind zentral, um eine optimistische Fehleinschätzung durch Datenlecks zu vermeiden.
+  \item Für tabellarische Daten bieten Ensemble-Methoden (Random Forest, XGBoost, LightGBM) einen starken und robusten Ausgangspunkt.
+  \item Die Wahl und das Engineering der Zielgröße (Target, z.B. absolute Zeit vs. Gap) kann entscheidend sein, um Messrauschen zu reduzieren und ein sinnvolles Modell zu trainieren.
+\end{itemize}
 
 \subsection*{Ausblick}
+\begin{itemize}
+  \item Ergänzung von Kontext-Features wie Safety-Car-Phasen, Virtual-Safety-Car-Phasen, Boxenstopp-Daten und der Renndistanz.
+  \item Entwicklung von zweistufigen Modellen, die zuerst die Wahrscheinlichkeit eines Rennabschlusses (Finisher-Prognose) und dann die Gap-Regression modellieren.
+  \item Systematische Hyperparameter-Suche für die Top-Modelle (RF, XGB, LGBM) und ein erneuter, detaillierter Vergleich mit TabPFN.
+  \item Aufbau einer automatisierten Report-Pipeline, die Metriken aus den Notebooks extrahiert und reproduzierbar als Tabellen und Grafiken für die Publikation exportiert.
+  \item Erweiterung der Datenbasis um weitere historische Saisons oder andere Rennserien, um die Generalisierungsfähigkeit auf echten Holdout-Jahren zu validieren.
+\end{itemize}

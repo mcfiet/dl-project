@@ -1,8 +1,75 @@
+\subsection{Klassifikation: Punktevorhersage}
+Die Notebook-Serie \texttt{notebooks/points\_scored/} dokumentiert die
+Experimentreihen, in denen verschiedene Modelle zur Vorhersage von Punkterfolgen
+trainiert und evaluiert wurden:
+\begin{itemize}
+  \item \textbf{Baseline (Logit/XGB, \texttt{baseline\_training.ipynb}):}
+    Ein einfaches Baseline-Modell wurde mit One-Hot-kodierten Features trainiert.
+  \item \textbf{Random Forest (\texttt{random\_forest\_baseline.ipynb}):}
+    Ein Random-Forest-Klassifikator wurde als robustes, nichtlineares Modell eingesetzt.
+  \item \textbf{XGBoost (\texttt{xgboost\_training.ipynb}):}
+    Ein XGBoost-Modell wurde als Vertreter der Gradient-Boosting-Verfahren evaluiert.
+  \item \textbf{Neuronales Netz (\texttt{model\_training.ipynb}):}
+    Ein mehrschichtiges Perzeptron (MLP) mit Early Stopping wurde als Deep-Learning-Ansatz getestet.
+  \item \textbf{Lernkurven (\texttt{learning\_curve\_analysis.ipynb}):}
+    Die Abhängigkeit der Modell-Performance von der Größe des Trainingsdatensatzes wurde analysiert.
+  \item \textbf{TabPFN (\texttt{tabpfn.ipynb}):}
+    Ein vortrainiertes Transformer-Modell (TabPFN) wurde ohne Hyperparameter-Optimierung verwendet.
+\end{itemize}
+
+Im Laufe der Experimente wurden außerdem verschiedene Feature-Engineering-Ansätze mit dem TabPFN getestet.
+Dazu zählten Versuche mit potenziell leckenden Merkmalen wie \texttt{avg\_racetime}, die später wieder entfernt wurden,
+sowie Variationen im Encoding (One-Hot, Integer-Indizes, Target Encoding) und das Maskieren unbekannter Kategorien.
+
+Die Analyse zeigt deutlich, dass die Startposition (\texttt{grid\_position}) der wichtigste Faktor für die Vorhersage ist: Je weiter vorne ein Fahrer startet, desto wahrscheinlicher erzielt er Punkte. Als zweitwichtigste Indikatoren identifiziert das TabPFN-Modell die aktuelle Form (\texttt{last\_3\_avg}) und die Saisonleistung des Teams (\texttt{season\_pts\_team}).
+
+Auffällig ist, dass die Team-Punkte wichtiger eingestuft werden als die Punkte des Fahrers. Da beide Werte extrem stark zusammenhängen (Korrelation von $0.96$), hat das Modell gelernt bevorzugt die Team-Daten zu nehmen. Reine Identifikationsmerkmale wie die \texttt{constructor\_id} liefern keinen Mehrwert und wirken sich sogar leicht negativ auf die Vorhersagequalität aus.
+
+\vspace{1cm}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{img/tabpfn_feature_importance.png}
+  \caption{Feature Importance des TabPFN-Modells für die Klassifikationsaufgabe (Punktevorhersage).}
+\end{figure}
+\vspace{1cm}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{img/tabpfn_feature_heatmap.png}
+  \caption{Feature Heatmap des TabPFN-Modells für die Klassifikationsaufgabe (Punktevorhersage).}
+\end{figure}
 \subsection{Regression: Rennzeit und Gap zum Sieger}
-Zu Beginn wurde versucht, die absolute Rennzeit auf Basis der bekannten Features (Fahrer/Team/Strecke, Grid, Quali-Deltas, Saisonpunkte, Rolling-Average, Street-/Wet-Flags) in einer Regression abzubilden. Die Fehler lagen jedoch hoch (MAE rund 0{,}6--0{,}9\,ks, RMSE über 1\,ks), weil FastF1 im Ergebnis \emph{entweder} die Siegerzeit \emph{oder} den Gap zur Spitze liefert und DNFs/fehlende Zeiten gemischt auftreten. Daraufhin wurde das Datenerzeugungsskript angepasst: \texttt{build\_fastf1\_dataset\_regression.py} rekonstruiert nun konsistente Rennzeiten (Siegerzeit als Referenz, andere Fahrer via Gap addiert) und speichert zusätzlich \texttt{race\_status}, \texttt{laps}, \texttt{gap\_to\_winner} und \texttt{race\_time\_per\_lap}; extreme Ausreißer werden per 1--99\,\%-Quantil gekappt.
+Die Notebook-Serie \texttt{notebooks/regression/} dokumentiert die Entwicklung
+des Regressionsziels. Ursprünglich wurde die absolute Rennzeit als Zielvariable verwendet,
+was sich jedoch als zu verrauscht erwies. Spätere Experimente fokussierten sich
+auf die Vorhersage des \texttt{gap\_to\_winner}:
+\begin{itemize}
+  \item \textbf{Absolute Zeit (\texttt{baseline\_regression.ipynb}):}
+    Erste Versuche, die absolute Rennzeit vorherzusagen, führten zu hohen Fehlermetriken,
+    bedingt durch Ausfälle (DNFs) und unvorhersehbare Rennereignisse.
+  \item \textbf{Gap-to-Winner (\texttt{gap\_to\_winner\_regression.ipynb}):}
+    Ein LightGBM-Modell wurde trainiert, um den Abstand zum Sieger vorherzusagen,
+    wobei die Anzahl der gefahrenen Runden (\texttt{laps}) als zusätzliches Feature diente.
+  \item \textbf{Random Forest (\texttt{random\_forest\_regression.ipynb}):}
+    Ein Random-Forest-Regressor wurde ebenfalls auf dem Gap-to-Winner-Ziel evaluiert.
+  \item \textbf{TabPFN (\texttt{tabpfn\_regression.ipynb}):}
+    Auch für die Regression wurde TabPFN als Vergleichsmodell herangezogen.
+\end{itemize}
+Die Entwicklung umfasste zudem Tests mit Log-Transformationen und Normalisierungen der absoluten Zeit,
+welche jedoch keine signifikante Verbesserung brachten. Der Daten-Builder wurde daraufhin angepasst, um konsistente
+Rennzeiten (Siegerzeit + Gap) zu generieren und relevante Metriken wie \texttt{race\_status},
+\texttt{laps}, \texttt{gap\_to\_winner} und \texttt{race\_time\_per\_lap} zu speichern.
 
-Log- und Normalisierungsansätze auf der absoluten Zeit (inklusive per-Runde- und Jahr-Median-Normierung) senkten zwar die MAPE, änderten aber wenig am hohen MAE/RMSE, weil Safety-Car-Phasen, rote Flaggen und Renndistanz das Ziel dominieren. Daher wurde das Target auf \texttt{gap\_to\_winner} (Sieger=0) umgestellt und mit \texttt{log1p} transformiert. Ein LightGBMRegressor mit dem bisherigen Feature-Set plus \texttt{laps} erzielte damit Val MAE von etwa 26\,s (RMSE ca. 33\,s) und Test MAE von etwa 23\,s (RMSE ca. 30\,s) bei Splits Train $\leq$2022, Val 2023, Test 2024; ein RandomForest lag leicht darunter (Val MAE ca. 24{,}5\,s, RMSE ca. 29{,}6\,s; Test MAE ca. 21{,}8\,s, RMSE ca. 28\,s). Prozentmetriken explodieren wegen sehr kleiner Gaps; deshalb wird MAPE nur für Gaps ab 5\,s berichtet und zusätzlich SMAPE genutzt, während MAE/RMSE die Hauptbewertung bleiben.
-
-Offen bleiben weitere Schritte: ein per-Runde-Gap/Pace-Target mit Rückrechnung auf die Gesamtrennzeit, zusätzliche Kontext-Features (Safety-Car/Virtual-Safety-Car-Runden, Boxenstopps, Renndistanz) sowie Modell-Tuning (LightGBM/XGBoost) und alternative Zieldefinitionen.
+Als neueste Erweiterung wurde ein separater Datensatz mit Trainingssessions (FP1--FP3) ergänzt
+(\texttt{data/regression/with\_training\_sessions/}). Dieser erweitert das Feature-Set um
+Bestzeiten, relative Abstände zur Session-Bestzeit und Rundenanzahlen
+(\texttt{fp1\_best}, \texttt{fp2\_best}, \texttt{fp3\_best},
+\texttt{fp1\_rel}--\texttt{fp3\_rel}, \texttt{fp1\_laps}--\texttt{fp3\_laps}).
+Die zugehörigen Experimente liegen in \texttt{notebooks/regression/with\_training\_sessions/}
+und replizieren die Baselines (LGBM, RF, XGBoost, TabPFN) mit dem erweiterten
+Feature-Set.
 
 \subsection{Zusammenfassung}
+Für die Klassifikation wurden baumbasierte Modelle (Random Forest, XGBoost), lineare und tiefe Baselines sowie TabPFN verglichen.
+In der Regression erwies sich nach initialen Tests mit absoluten Rennzeiten der \texttt{gap\_to\_winner} als robustes Ziel.
+Die Grundlage für die Analyse bilden konsistente Datensätze, jahresbasierte Splits und eine klare Protokollierung der
+Metriken in den Notebooks.

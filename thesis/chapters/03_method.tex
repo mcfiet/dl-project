@@ -1,43 +1,62 @@
 \subsection{Datengrundlage}
 Als Datenquelle dient das Python-Paket FastF1, das offizielle F1-Ergebnis- und
-Qualifyingdaten bereitstellt. Für jede Saison und jedes Rennen werden die
-Qualifying- und Rennsessions geladen und pro Fahrer ein Datensatz erzeugt.
-Jede Zeile entspricht damit einem Fahrer in einem Grand Prix. Verwendet werden
-ausschließlich vor dem Rennen verfügbare Informationen, um Datenleckage zu
-vermeiden. Die Merkmale umfassen sowohl kategorische Identifikatoren als auch
-numerische Leistungsindikatoren:
+Qualifyingdaten bereitstellt. Pro Saison und Rennen werden Qualifying- und
+Rennsessions geladen und pro Fahrer ein Datensatz erzeugt; jede Zeile entspricht
+damit einem Fahrer in einem Grand Prix. Zwei Builder-Skripte erzeugen die
+Features:
 \begin{itemize}
-  \item \textbf{Kategorisch:} Fahrer (\texttt{driver\_id}), Team
-    (\texttt{constructor\_id}) und Strecke (\texttt{circuit\_id}).
-  \item \textbf{Numerisch:} Startposition aus dem Qualifying
-    (\texttt{grid\_position}), Qualifying-Deltas zum Sessionsbesten und zum
-    Teamkollegen (\texttt{quali\_delta}, \texttt{quali\_tm\_delta}), kumulierte
-    Saisonpunkte von Fahrer und Team vor dem Rennen
-    (\texttt{season\_pts\_driver}, \texttt{season\_pts\_team}), gleitender
-    Durchschnitt der letzten drei Rennen (\texttt{last\_3\_avg}) sowie einfache
-    Kontextvariablen für Stadtkurse und Regenrennen
+  \item \textbf{Klassifikation (\texttt{build\_fastf1\_dataset.py}):} Verwendet
+    ausschließlich vor dem Rennen verfügbare Informationen zur Vorhersage
+    \texttt{points\_scored}. Merkmale: Fahrer-, Team- und Strecken-IDs
+    (\texttt{driver\_id}, \texttt{constructor\_id}, \texttt{circuit\_id}),
+    Startposition (\texttt{grid\_position}), Qualifying-Deltas (gesamt und zum
+    Teamkollegen: \texttt{quali\_delta}, \texttt{quali\_tm\_delta}),
+    kumulierte Saisonpunkte (\texttt{season\_pts\_driver},
+    \texttt{season\_pts\_team}), gleitender Punktemittelwert der letzten drei
+    Rennen (\texttt{last\_3\_avg}) sowie Kontextflags für Stadtkurse und Regen
     (\texttt{is\_street\_circuit}, \texttt{is\_wet}).
+  \item \textbf{Regression (\texttt{build\_fastf1\_dataset\_regression.py}):}
+    Rekonstruiert konsistente Rennzeiten, indem die Siegerzeit als Referenz
+    genutzt und Gaps addiert werden; DNFs bleiben als Status erkennbar.
+    Zusätzliche Ziele: \texttt{gap\_to\_winner} (Sieger=0),
+    \texttt{race\_time\_per\_lap} und Rundenanzahl (\texttt{laps}).
 \end{itemize}
-Das Ziellabel ist \texttt{points\_scored} und markiert, ob ein Fahrer im Rennen
-Punkte erzielt hat (binäre Klassifikation).
+Um Generalisierung auf neue Fahrer/Teams/Strecken zu prüfen, werden unbekannte
+Kategorien optional maskiert. Jahressplits verhindern, dass spätere Saisons in
+die Trainingsphase leaken.
 
 \subsection{Modellarchitekturen}
 Die Daten sind tabellarisch mit einer Mischung aus kategorischen und
-numerischen Merkmalen. Daher werden mehrere Modellfamilien verglichen:
-eine logistische Regression als lineare Baseline, ein Random-Forest-Modell
-als nichtlineares Ensemble sowie Gradient-Boosting-Modelle (XGBoost bzw.
-LightGBM), die sich in ähnlichen Aufgaben als robust erwiesen haben. Die
-Boosting-Modelle dienen als Hauptvergleich, da sie nichtlineare Effekte und
-Interaktionen zwischen Merkmalen effizient abbilden können.
+numerischen Merkmalen. Für beide Aufgaben (Klassifikation und Regression)
+werden mehrere Modellfamilien verglichen:
+\begin{itemize}
+  \item \textbf{Lineare Baselines:} Logistische Regression (Klassifikation) bzw.
+    lineare Modelle mit Regularisierung (Regression) als Vergleich.
+  \item \textbf{Lineare Baseline:} Random Forests als robuste, nichtlineare Baseline.
+  \item \textbf{Gradient Boosting:} XGBoost/LightGBM als Haupt-Workhorse für
+    tabellarische Daten; effizient in Interaktionen und nichtlinearen Effekten.
+  \item \textbf{Neuronale Netze:} Mehrschichtige Perzeptren mit Early Stopping
+    als tiefes Pendant, hauptsächlich für die Klassifikation erprobt.
+  \item \textbf{TabPFN:} Vortrainiertes Few-Shot-Transformer-Modell, das ohne
+    Hyperparameter-Tuning konkurrenzfähige Performance liefern kann. TabPFN ist
+    speziell für kleine bis mittlere tabellarische Datensätze ausgelegt; mit
+    3740 Trainingsbeispielen (insgesamt 4698 Zeilen) und 12 Merkmalen
+    (4 kategorial, 8 numerisch) liegt der verwendete Datensatz im
+    Zielbereich dieses Modells.
+\end{itemize}
 
 \subsection{Trainingssetup}
 Die Datensätze werden nach Saison getrennt, um zeitliche Leckage zu vermeiden.
-Im vorliegenden Setup werden die Saisons 2015--2023 als Training,
-2024 als Validierung und 2025 als Test verwendet (insgesamt 3740/479/479
-Beispiele). Kategorische Variablen werden per One-Hot-Encoding kodiert,
-numerische Merkmale werden imputiert (Median) und skaliert. Für unausgewogene
-Klassen wird in den Baumverfahren eine balancierte Gewichtung verwendet.
-Die Modellselektion erfolgt über die Validierungsdaten, wobei ein
-Entscheidungsschwellenwert auf dem Validierungs-\textit{F1}-Score abgestimmt
-und anschließend auf dem Testdatensatz evaluiert wird. Als Metriken werden
-u.a. \textit{F1}-Score und \textit{Balanced Accuracy} berichtet.
+Typische Splits: Training bis einschließlich 2022, Validierung 2023, Test 2024
+für Regression; für die Klassifikation wurden auch Saisons 2015--2025 in
+Train/Val/Test mit 3740/479/479 Beispielen genutzt. Kategorische Variablen
+werden je nach Modell One-Hot-kodiert oder als Integer-Indizes
+verwendet. Numerische Merkmale werden imputiert (Median) und skaliert. Für
+unausgewogene Klassen kommt in Baumverfahren eine balancierte Gewichtung zum
+Einsatz. Allerdings hat sich gezeigt, dass die Klassenungleichheit bei der Klassifikation fast nicht existent ist, da durch die Punkteregelung fast die Hälfte der Fahrer Punkte erzielt.
+
+Modellselektion erfolgt auf dem Validierungsset. Bei der Klassifikation wird
+der Entscheidungsschwellenwert auf den Validierungs-\textit{F1}-Score optimiert
+und anschließend auf dem Testset ausgewertet. Berichtete Metriken: \textit{F1}
+binär/makro und \textit{Balanced Accuracy}. In der Regression stehen
+\textit{MAE}/\textit{RMSE} im Fokus; da ich zuerst davon ausgegangen wurde, dass sehr kleine Gaps prozentuale Kennzahlen aufblähen, wurde \textit{MAPE} nur ab 5\,s Gap sowie \textit{SMAPE} ergänzend angegeben. Allerdings hatte das keinen großen Einfluss auf \textit{MAPE}.
