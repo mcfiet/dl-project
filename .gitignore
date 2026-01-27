@@ -20,6 +20,9 @@ venv*/
 Pipfile.lock
 poetry.lock
 .poetry/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
 
 # Python tooling caches
 .pytest_cache/
@@ -48,6 +51,9 @@ profile_default/
 data/fastf1_cache
 datasets/
 models/
+ui/node_modules/
+ui/dist/
+ui/.vite/
 
 # IDEs / editors
 .vscode/
