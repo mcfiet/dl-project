@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pickle
 import sys
+import types
 from pathlib import Path
 from typing import Dict, List
 
@@ -14,6 +15,21 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from scripts.points_scored_model import ModelBundle, prepare_features
 
+
+def ensure_tabpfn_preprocessors() -> None:
+    """Provide a shim for older pickles referencing tabpfn.preprocessors."""
+    try:
+        import tabpfn.preprocessors  # noqa: F401
+    except ModuleNotFoundError:
+        try:
+            import tabpfn.preprocessing as preprocessing
+        except ModuleNotFoundError:
+            return
+        shim = types.ModuleType("tabpfn.preprocessors")
+        for name in dir(preprocessing):
+            setattr(shim, name, getattr(preprocessing, name))
+        sys.modules["tabpfn.preprocessors"] = shim
+
 MODEL_PATH = Path("models/tabpfn_points_scored.pkl")
 
 app = FastAPI(title="Points Scored Inference")
@@ -22,6 +38,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "https://dl.devoniq.de",
     ],
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,6 +68,7 @@ class PointsScoredResponse(BaseModel):
 def load_bundle() -> ModelBundle:
     if not MODEL_PATH.exists():
         raise FileNotFoundError(f"Model not found at {MODEL_PATH}")
+    ensure_tabpfn_preprocessors()
     with MODEL_PATH.open("rb") as f:
         return pickle.load(f)
 

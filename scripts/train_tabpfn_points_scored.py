@@ -52,6 +52,12 @@ def parse_args() -> argparse.Namespace:
         help="Apply categorical dropout during training (default: 0.5).",
     )
     parser.add_argument(
+        "--device",
+        default="cpu",
+        choices=["cpu", "cuda"],
+        help="Device to use for TabPFN (default: cpu).",
+    )
+    parser.add_argument(
         "--output",
         default="models/tabpfn_points_scored.pkl",
         help="Where to save the model bundle.",
@@ -89,7 +95,11 @@ def main() -> None:
     X_train, y_train = train[CAT_COLS + NUM_COLS], train[TARGET_COL]
     X_val, y_val = val[CAT_COLS + NUM_COLS], val[TARGET_COL]
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if args.device == "cuda" and not torch.cuda.is_available():
+        print("CUDA requested but not available; falling back to CPU.")
+        device = torch.device("cpu")
+    else:
+        device = torch.device(args.device)
     cat_idx = [X_train.columns.get_loc(c) for c in CAT_COLS]
 
     clf = TabPFNClassifier(device=device, categorical_features_indices=cat_idx)

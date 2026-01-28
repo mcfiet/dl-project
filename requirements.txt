@@ -4,7 +4,7 @@ seaborn
 tqdm
 scikit-learn
 torch
-tabpfn
+tabpfn==6.1.0
 numpy
 pandas
 fastapi

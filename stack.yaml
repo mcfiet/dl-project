@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  api:
+    image: ghcr.io/mcfiet/dl-project-api:latest
+    networks:
+      - frontend
+    volumes:
+      - /home/fiete/dl-project/models:/app/models:ro
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  ui:
+    image: ghcr.io/mcfiet/dl-project-ui:latest
+    networks:
+      - frontend
+    ports:
+      - "8080:80"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+networks:
+  frontend:
+    external: true

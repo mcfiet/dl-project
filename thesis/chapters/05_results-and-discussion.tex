@@ -14,7 +14,7 @@ Die Ergebnisse auf dem Testset sind in Tabelle \ref{tab:classification_results} 
 \toprule
 \textbf{Modell} & \textbf{F1-Score (binär)} & \textbf{Accuracy} & \textbf{Balanced Accuracy} \\
 \midrule
-TabPFN & $\approx 0,855$ & $\approx 0,850$ & $\approx 0,850$ \\
+\textbf{TabPFN} & $\approx \textbf{0,855}$ & $\approx \textbf{0,850}$ & $\approx \textbf{0,850}$ \\
 Random Forest & $\approx 0,835$ & $\approx 0,829$ & $\approx 0,829$ \\
 XGBoost & $\approx 0,763$ & $\approx 0,747$ & $\approx 0,747$ \\
 Neuronales Netz & $\approx 0,746$ & $\approx 0,733$ & $\approx 0,733$ \\
@@ -50,12 +50,3 @@ Wie Tabelle \ref{tab:classification_results} zeigt, erzielt das vortrainierte Ta
 In der Regression (siehe Tabelle~\ref{tab:regression_results}) liefert der Random Forest den niedrigsten MAE, knapp vor TabPFN und LightGBM. Der Wechsel des Ziels von der absoluten Rennzeit auf den \texttt{gap\_to\_winner} hat die Varianz der Zielgröße signifikant reduziert und aussagekräftige Vorhersagen ermöglicht. Die verbleibenden Fehler sind vermutlich auf nicht modellierte Rennkontext-Features (z.\,B.\ Safety-Car-Phasen, Boxenstopps) zurückzuführen. Prozentuale Metriken wie SMAPE reagieren bei sehr kleinen Gaps überproportional, weshalb MAE und RMSE die primären Bewertungsmetriken bleiben.
 
 Wichtig für die Validität der Ergebnisse ist die strikte, jahresbasierte Trennung der Daten, um eine Datenleckage durch Informationen aus der Zukunft zu vermeiden.
-
-\subsection{Limitationen.}
-\begin{itemize}
-    \item Relativ kleine Trainingsmengen pro Saison
-    \item Keine explizite Modellierung von DNFs/Safety-Car/Boxenstopps
-    \item TabPFN ohne systematische Tuning-Studie
-\end{itemize}
-
-Diese Punkte begrenzen derzeit die Generalisierung auf neue Saisons.

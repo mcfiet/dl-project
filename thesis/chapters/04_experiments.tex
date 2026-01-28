@@ -1,24 +1,16 @@
 \subsection{Klassifikation: Punktevorhersage}
 Die Notebook-Serie \texttt{notebooks/points\_scored/} dokumentiert die
-Experimentreihen, in denen verschiedene Modelle zur Vorhersage von Punkterfolgen
-trainiert und evaluiert wurden:
-\begin{itemize}
-  \item \textbf{Baseline (Logit/XGB, \texttt{baseline\_training.ipynb}):}
-    Ein einfaches Baseline-Modell wurde mit One-Hot-kodierten Features trainiert.
-  \item \textbf{Random Forest (\texttt{random\_forest\_baseline.ipynb}):}
-    Ein Random-Forest-Klassifikator wurde als robustes, nichtlineares Modell eingesetzt.
-  \item \textbf{XGBoost (\texttt{xgboost\_training.ipynb}):}
-    Ein XGBoost-Modell wurde als Vertreter der Gradient-Boosting-Verfahren evaluiert.
-  \item \textbf{Neuronales Netz (\texttt{model\_training.ipynb}):}
-    Ein mehrschichtiges Perzeptron (MLP) mit Early Stopping wurde als Deep-Learning-Ansatz getestet.
-  \item \textbf{Lernkurven (\texttt{learning\_curve\_analysis.ipynb}):}
-    Die Abhängigkeit der Modell-Performance von der Größe des Trainingsdatensatzes wurde analysiert.
-  \item \textbf{TabPFN (\texttt{tabpfn.ipynb}):}
-    Ein vortrainiertes Transformer-Modell (TabPFN) wurde ohne Hyperparameter-Optimierung verwendet.
-\end{itemize}
+Experimentreihen zur Klassifikation und folgt den in Abschnitt
+\textit{Modellarchitekturen} beschriebenen Familien: lineare Baselines, baumbasierte
+Verfahren (Random Forest, XGBoost), ein MLP sowie TabPFN. Die Umsetzung liegt in
+\texttt{baseline\_training.ipynb},
+\sloppy \texttt{random\_forest\_baseline.ipynb},
+\texttt{xgboost\_training.ipynb}, \texttt{model\_training.ipynb} und
+\texttt{tabpfn.ipynb}; ergänzend analysiert
+\texttt{learning\_curve\_analysis.ipynb} die Abhängigkeit von der Trainingsgröße.
 
 Im Laufe der Experimente wurden außerdem verschiedene Feature-Engineering-Ansätze mit dem TabPFN getestet.
-Dazu zählten Versuche mit potenziell leckenden Merkmalen wie \texttt{avg\_racetime}, die später wieder entfernt wurden,
+Dazu zählten Versuche mit potenziell ``leckenden'' Merkmalen wie \texttt{avg\_racetime}, die später wieder entfernt wurden,
 sowie Variationen im Encoding (One-Hot, Integer-Indizes, Target Encoding) und das Maskieren unbekannter Kategorien.
 
 Die Analyse zeigt deutlich, dass die Startposition (\texttt{grid\_position}) der wichtigste Faktor für die Vorhersage ist: Je weiter vorne ein Fahrer startet, desto wahrscheinlicher erzielt er Punkte. Als zweitwichtigste Indikatoren identifiziert das TabPFN-Modell die aktuelle Form (\texttt{last\_3\_avg}) und die Saisonleistung des Teams (\texttt{season\_pts\_team}).
@@ -39,21 +31,12 @@ Auffällig ist, dass die Team-Punkte wichtiger eingestuft werden als die Punkte 
 \end{figure}
 \subsection{Regression: Rennzeit und Gap zum Sieger}
 Die Notebook-Serie \texttt{notebooks/regression/} dokumentiert die Entwicklung
-des Regressionsziels. Ursprünglich wurde die absolute Rennzeit als Zielvariable verwendet,
-was sich jedoch als zu verrauscht erwies. Spätere Experimente fokussierten sich
-auf die Vorhersage des \texttt{gap\_to\_winner}:
-\begin{itemize}
-  \item \textbf{Absolute Zeit (\texttt{baseline\_regression.ipynb}):}
-    Erste Versuche, die absolute Rennzeit vorherzusagen, führten zu hohen Fehlermetriken,
-    bedingt durch Ausfälle (DNFs) und unvorhersehbare Rennereignisse.
-  \item \textbf{Gap-to-Winner (\texttt{gap\_to\_winner\_regression.ipynb}):}
-    Ein LightGBM-Modell wurde trainiert, um den Abstand zum Sieger vorherzusagen,
-    wobei die Anzahl der gefahrenen Runden (\texttt{laps}) als zusätzliches Feature diente.
-  \item \textbf{Random Forest (\texttt{random\_forest\_regression.ipynb}):}
-    Ein Random-Forest-Regressor wurde ebenfalls auf dem Gap-to-Winner-Ziel evaluiert.
-  \item \textbf{TabPFN (\texttt{tabpfn\_regression.ipynb}):}
-    Auch für die Regression wurde TabPFN als Vergleichsmodell herangezogen.
-\end{itemize}
+des Regressionsziels von der absoluten Rennzeit hin zum robusteren
+\texttt{gap\_to\_winner} und nutzt dabei die in Abschnitt \textit{Modellarchitekturen}
+beschriebenen Familien (Gradient Boosting/LightGBM, Random Forest, TabPFN sowie
+lineare Baselines). Die konkreten Experimente liegen in
+\texttt{baseline\_regression.ipynb}, \texttt{gap\_to\_winner\_regression.ipynb},
+\texttt{random\_forest\_regression.ipynb} und \texttt{tabpfn\_regression.ipynb}.
 Die Entwicklung umfasste zudem Tests mit Log-Transformationen und Normalisierungen der absoluten Zeit,
 welche jedoch keine signifikante Verbesserung brachten. Der Daten-Builder wurde daraufhin angepasst, um konsistente
 Rennzeiten (Siegerzeit + Gap) zu generieren und relevante Metriken wie \texttt{race\_status},
@@ -67,9 +50,3 @@ Bestzeiten, relative Abstände zur Session-Bestzeit und Rundenanzahlen
 Die zugehörigen Experimente liegen in \texttt{notebooks/regression/with\_training\_sessions/}
 und replizieren die Baselines (LGBM, RF, XGBoost, TabPFN) mit dem erweiterten
 Feature-Set.
-
-\subsection{Zusammenfassung}
-Für die Klassifikation wurden baumbasierte Modelle (Random Forest, XGBoost), lineare und tiefe Baselines sowie TabPFN verglichen.
-In der Regression erwies sich nach initialen Tests mit absoluten Rennzeiten der \texttt{gap\_to\_winner} als robustes Ziel.
-Die Grundlage für die Analyse bilden konsistente Datensätze, jahresbasierte Splits und eine klare Protokollierung der
-Metriken in den Notebooks.

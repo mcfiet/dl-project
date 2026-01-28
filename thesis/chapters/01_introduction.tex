@@ -1,38 +1,5 @@
-\subsection{Code und Daten}
-Der Code der in diesem Projekt verwendet wurde ist unter \href{https://github.com/mcfiet/dl-project}{https://github.com/mcfiet/dl-project} zu finden.
+\subsection{Hintergrund und Problemstellung}
+Die Formel 1 ist ein stark datengetriebener Sport, weshalb sich die Leistung von Fahrern und Teams gut analysieren lässt. Die zentrale Frage dieser Arbeit ist, ob man aus den vor einem Rennen verfügbaren Informationen zuverlässige Ergebnisse vorhersagen kann. Das Problem wird dabei zweigeteilt: Zunächst wird klassifiziert, ob ein Fahrer überhaupt Punkte erzielt. Darauf aufbauend wird der zeitliche Rückstand zum Sieger modelliert, da dieser Wert eine stabilere Zielvariable darstellt als die durch äußere Einflüsse oft verfälschte absolute Rennzeit.
 
-\subsection{Motivation}
-Die Formel 1 ist ein datengetriebener Sport, in dem Performance von vielen Faktoren
-abhängt: Fahrer, Team, Strecke, Startposition und Rennverlauf. Durch die
-Verfügbarkeit strukturierter Telemetrie- und Ergebnisdaten lässt sich genau bestimmen, wie stark diese Einflüsse sind. Vorhersagen sind für Fans,
-Teams und Medien interessant, weil sie Vergleiche über Saisons hinweg
-ermöglichen und Entscheidungen (z.B. Strategieeinschätzungen) stützen
-können.
-
-\subsection{Problemstellung}
-Die zentrale Frage dieser Arbeit ist, ob sich aus vor dem Rennen verfügbaren
-Informationen eine zuverlässige Vorhersage über Rennergebnisse ableiten lässt.
-Konkret wird ein Klassifikationsproblem betrachtet: Für jeden Fahrer soll
-vorhergesagt werden, ob er in einem Grand Prix Punkte erzielt. 
-
-Darauf aufbauend wird ein Regressionsproblem formuliert, das den Abstand zum
-Sieger (\texttt{gap\_to\_winner}) in Sekunden modelliert. Absolute Rennzeiten
-zeigen sich als zu verrauscht (DNFs, rote Flaggen, Safety Cars); der Gap dient
-als stabileres, saisonübergreifendes Target und erlaubt perspektivisch eine
-Positions- bzw. Podiumsprognose. Die Herausforderung liegt in der Mischung aus
-kategorischen und numerischen Merkmalen, zeitlicher Dynamik sowie in der
-begrenzten Anzahl an Beispielen pro Saison.
-
-\subsection{Ziel dieser Arbeit}
-Ziel ist der Aufbau eines reproduzierbaren Datensatzes aus FastF1-Daten sowie
-die Entwicklung und der Vergleich geeigneter Machine-Learning-Modelle für die
-Punktevorhersage. Dazu werden Merkmale wie Startposition, Qualifying-Performance,
-Saisonschnitt der Punkte und Streckentypen abgeleitet. Die Modelle werden auf
-Trainings-, Validierungs- und Testdaten evaluiert und mit geeigneten Metriken
-(u.a. F1-Score und Balanced Accuracy) verglichen.
-
-Ähnlich wie bei der Klassifikation, wird auch bei der Regression ein Builder entwickelt, der konsistente
-Rennzeiten rekonstruiert, Gaps ableitet und robuste Fehlermaße (MAE/RMSE,
-SMAPE) verwendet. Ziel ist eine belastbare Basis, um anschließend Podiums- oder
-Siegerprognosen abzuleiten. Abschließend werden die Ergebnisse interpretiert
-und Limitationen sowie mögliche Erweiterungen diskutiert.
+\subsection{Zielsetzung und Ressourcen}
+Das Ziel dieser Arbeit ist der Aufbau eines reproduzierbaren Datensatzes sowie die Entwicklung und der Vergleich geeigneter Machine-Learning-Modelle. Unter Einbeziehung verschiedener Merkmale, wie etwa der Startposition oder des Streckentyps, werden die Modelle trainiert und anschließend evaluiert. Dies dient als Basis, um perspektivisch auch Podiumsplatzierungen vorhersagen zu können. Der gesamte Code, der in diesem Projekt verwendet wurde, ist unter \href{https://github.com/mcfiet/dl-project}{https://github.com/mcfiet/dl-project} zu finden.

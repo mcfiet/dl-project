@@ -108,7 +108,7 @@ export default function App() {
     }
 
     try {
-      const response = await fetch("/predict", {
+      const response = await fetch("https://dl-api.devoniq.de/predict", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -152,7 +152,7 @@ export default function App() {
               Feature-Definitionen wie im Trainings-Notebook (Fahrer, Team, Strecke,
               Jahr sowie Rennkontext). Die Eingaben werden konsistent kodiert,
               anschließend liefert das Modell eine Wahrscheinlichkeit für
-              Punkteausbeute.
+              Punkte im Rennen.
             </Typography>
           </Stack>
 

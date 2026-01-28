@@ -4,6 +4,7 @@ import argparse
 import json
 import pickle
 import sys
+import types
 from pathlib import Path
 
 import pandas as pd
@@ -11,6 +12,20 @@ import pandas as pd
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from scripts.points_scored_model import ModelBundle, prepare_features
+
+
+def ensure_tabpfn_preprocessors() -> None:
+    try:
+        import tabpfn.preprocessors  # noqa: F401
+    except ModuleNotFoundError:
+        try:
+            import tabpfn.preprocessing as preprocessing
+        except ModuleNotFoundError:
+            return
+        shim = types.ModuleType("tabpfn.preprocessors")
+        for name in dir(preprocessing):
+            setattr(shim, name, getattr(preprocessing, name))
+        sys.modules["tabpfn.preprocessors"] = shim
 
 
 def parse_args() -> argparse.Namespace:
@@ -38,6 +53,7 @@ def load_input(payload: str) -> dict:
 def main() -> None:
     args = parse_args()
 
+    ensure_tabpfn_preprocessors()
     with Path(args.model).open("rb") as f:
         bundle: ModelBundle = pickle.load(f)
 
