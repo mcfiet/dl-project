@@ -11,6 +11,13 @@ Das Projekt ist in die folgenden Ordner unterteilt:
 - `scripts`: Enthält verschiedene Python-Skripte zur Automatisierung von Aufgaben wie Datenauswertung und Modelltraining.
 - `ui`: React-Frontend (Vite + MUI) für die Inferenz der Punkte-Klassifikation.
 - `thesis`: Enthält die LaTeX-Dateien der Projektarbeit.
+- `models`: Enthält gespeicherte Modell-Artefakte (z.B. das TabPFN-Bundle für `points_scored`).
+
+Zusätzliche Daten-Unterordner:
+
+- `data/learning_curve`: Enthält erzeugte Subsets und Ergebnisse der Lernkurven-Analysen.
+- `data/original`: Ablage älterer bzw. ursprünglicher Datensätze.
+- `data/regression/with_training_sessions`: Regressionsdaten inkl. Trainings-Sessions (FP1–FP3).
 
 ## Abhängigkeiten
 
@@ -146,6 +153,8 @@ npm install
 npm run dev
 ```
 
+Hinweis: `ui/nginx.conf` enthält die Nginx-Konfiguration für das gebaute Frontend.
+
 ## Notebooks
 
 Der Ordner `notebooks` ist in zwei Hauptkategorien unterteilt: `points_scored` und `regression`.
@@ -160,6 +169,7 @@ Diese Notebooks konzentrieren sich auf die Klassifikationsaufgabe, ob ein Fahrer
 - `random_forest_baseline.ipynb`: Training eines Random-Forest-Modells als Baseline.
 - `tabpfn.ipynb`: Experimente mit dem TabPFN-Modell.
 - `xgboost_training.ipynb`: Training eines XGBoost-Modells.
+- `fastf1_data_visualization.ipynb`: Explorative Visualisierung von FastF1-Daten.
 
 ### `regression`
 
@@ -180,3 +190,8 @@ Dieser Unterordner enthält Notebooks, die zusätzlich Daten aus den Trainings-S
 - `random_forest_regression.ipynb`: Random-Forest-Modell mit Trainingsdaten.
 - `tabpfn_regression.ipynb`: TabPFN-Modell mit Trainingsdaten.
 - `xgboost_regression.ipynb`: XGBoost-Modell mit Trainingsdaten.
+
+## Thesis
+
+Der Ordner `thesis` enthält eine eigene README (`thesis/README.md`) mit Hinweisen
+zur LaTeX-Umgebung und zum Build der Arbeit.
